@@ -1,11 +1,59 @@
+## Date 18th March 2020
+Thank you Tracey tboggiano
+    New CIS user-defined CLRs to be set to SAFE_ACCESS #734
+    CIS tests for if service accounts are local admins #736
+
+Thank you Rob
+    Getting service accounts tests to pass if no service
+    Made long running jobs check work as expected
+    Improved Database Mail check
+    Made sure disk allocations dont run on Core
+
+Thank you mikedavem
+    Fixed bug in disk allocation check exclusions
+    Added multiple ags to the HADR check #742
+
+##Latest
+
+## Date 14th March 2020
+Thank you Tracey tboggiano
+    New CIS Check Hide Instance #728
+    New CIS Check Symmetric Key #732
+    New CIS Check Agent Proxy not have access to public Role #732
+
+## Date 8th January 2020
+Thank you Tracey tboggiano
+    New CIS Check Guest Account connect permissions #725
+    New CIS Check BuiltIn Admins login #726
+    New CIS Check public role permissions #729
+    New CIS Check local windows groups do not have logins #731
+    Update sa login check #730
+    
+Thank you Rob
+    Added Tag parameter to Get-DbcCheck
+    Updated tests to work with PowerShell 7
+
+## Date 22nd December
+Thank you Tracey tboggiano
+    Two New CIS Checks Contained databases should be auto-closed #721
+    sa login disabled and should not exist #719
+    
+Thank you Rob
+    Fix bug in Agent Tests #723
+
+## Date 28th November
+Thank you Tracey tboggiano
+    Added new CIS Check for the latest SQL build #716
+    
+Thank you Rob
+    Making the SQL Engine Service Check configurable #706
+
 ## Date 26th November
 Thank you Tracey @tboggiano
     Added new CIS Check for OLE AUtomation Procedures to be disabled #707
     Moving the Cross DB Ownership Chaining check into the AllInstance check to help speed up checks #708
 Thank you Rob
     Fixing the Tags so that they are picked up by AllInstanceInfo Fixes #715
-
-##Latest
 
 ## Date 16th November
 Thank you Matt @matt2005

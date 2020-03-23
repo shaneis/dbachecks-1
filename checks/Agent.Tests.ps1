@@ -48,7 +48,7 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                     else {
                         # cant check agent on container - hmm does this actually work with instance nered to check
                         if (-not $IsLinux -and ($InstanceSMO.HostPlatform -ne 'Linux')) {
-                                
+
                             Context "Testing SQL Agent is running on $psitem" {
                                 @(Get-DbaService -ComputerName $psitem -Type Agent).ForEach{
                                     It "SQL Agent should be running on $($psitem.ComputerName)" {
@@ -83,7 +83,6 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                         }
                     }
                     else {
-                            
                         Context "Testing DBA Operators exists on $psitem" {
                             $operatorname = Get-DbcConfigValue agent.dbaoperatorname
                             $operatoremail = Get-DbcConfigValue agent.dbaoperatoremail
@@ -134,7 +133,7 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                         Context "Testing database mail profile is set on $psitem" {
                             $databasemailprofile = Get-DbcConfigValue  agent.databasemailprofile
                             It "database mail profile on $psitem is $databasemailprofile" {
-                                (Connect-DbaInstance -SqlInstance $psitem).JobServer.DatabaseMailProfile | Should -Be $databasemailprofile -Because 'The database mail profile is required to send emails'
+                                (Get-DbaDbMailProfile -SqlInstance $InstanceSMO).Name | Should -Be $databasemailprofile -Because 'The database mail profile is required to send emails'
                             }
                         }
                     }
@@ -186,7 +185,6 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                         }
                     }
                     else {
-                           
                         Context "Testing job owners on $psitem" {
                             @(Get-DbaAgentJob -SqlInstance $psitem -EnableException:$false).ForEach{
                                 It "Job $($psitem.Name)  - owner $($psitem.OwnerLoginName) should be in this list ( $( [String]::Join(", ", $targetowner) ) ) on $($psitem.SqlInstance)" {
@@ -202,7 +200,7 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                     $messageid = Get-DbcConfigValue agent.alert.messageid
                     $AgentAlertJob = Get-DbcConfigValue agent.alert.Job
                     $AgentAlertNotification = Get-DbcConfigValue agent.alert.Notification
-                    
+                    $skip = Get-DbcConfigValue skip.agent.alert
                     if ($NotContactable -contains $psitem) {
                         Context "Testing Agent Alerts Severity exists on $psitem" {
                             It "Can't Connect to $Psitem" {
@@ -219,19 +217,19 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                         $alerts = Get-DbaAgentAlert -SqlInstance $psitem
                         Context "Testing Agent Alerts Severity exists on $psitem" {
                             ForEach ($sev in $severity) {
-                                It "$psitem should have Severity $sev Alert" {
+                                It "$psitem should have Severity $sev Alert" -Skip:$skip{
                                     ($alerts.Where{ $psitem.Severity -eq $sev }) | Should -be $true -Because "Recommended Agent Alerts to exists http://blog.extreme-advice.com/2013/01/29/list-of-errors-and-severity-level-in-sql-server-with-catalog-view-sysmessages/"
                                 }
-                                It "$psitem should have Severity $sev Alert enabled" {
+                                It "$psitem should have Severity $sev Alert enabled" -Skip:$skip{
                                     ($alerts.Where{ $psitem.Severity -eq $sev }) | Should -be $true -Because "Configured alerts should be enabled"
                                 }
                                 if ($AgentAlertJob) {
-                                    It "$psitem should have Jobname for Severity $sev Alert" {
+                                    It "$psitem should have Jobname for Severity $sev Alert" -Skip:$skip{
                                         ($alerts.Where{ $psitem.Severity -eq $sev }).jobname -ne $null | Should -be $true -Because "Should notify by SQL Agent Job"
                                     }
                                 }
                                 if ($AgentAlertNotification) {
-                                    It "$psitem should have notification for Severity $sev Alert" {
+                                    It "$psitem should have notification for Severity $sev Alert" -Skip:$skip{
                                         ($alerts.Where{ $psitem.Severity -eq $sev }).HasNotification -in 1, 2, 3, 4, 5, 6, 7 | Should -be $true -Because "Should notify by Agent notifications"
                                     }
                                 }
@@ -239,19 +237,19 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                         }
                         Context "Testing Agent Alerts MessageID exists on $psitem" {
                             ForEach ($mid in $messageid) {
-                                It "$psitem should have Message_ID $mid Alert" {
+                                It "$psitem should have Message_ID $mid Alert" -Skip:$skip{
                                     ($alerts.Where{ $psitem.messageid -eq $mid }) | Should -be $true -Because "Recommended Agent Alerts to exists http://blog.extreme-advice.com/2013/01/29/list-of-errors-and-severity-level-in-sql-server-with-catalog-view-sysmessages/"
                                 }
-                                It "$psitem should have Message_ID $mid Alert enabled" {
+                                It "$psitem should have Message_ID $mid Alert enabled" -Skip:$skip{
                                     ($alerts.Where{ $psitem.messageid -eq $mid }) | Should -be $true -Because "Configured alerts should be enabled"
                                 }
                                 if ($AgentAlertJob) {
-                                    It "$psitem should have Job name for Message_ID $mid Alert" {
+                                    It "$psitem should have Job name for Message_ID $mid Alert" -Skip:$skip {
                                         ($alerts.Where{ $psitem.messageid -eq $mid }).jobname -ne $null | Should -be $true -Because "Should notify by SQL Agent Job"
                                     }
                                 }
                                 if ($AgentAlertNotification) {
-                                    It "$psitem should have notification for Message_ID $mid Alert" {
+                                    It "$psitem should have notification for Message_ID $mid Alert" -Skip:$skip {
                                         ($alerts.Where{ $psitem.messageid -eq $mid }).HasNotification -in 1, 2, 3, 4, 5, 6, 7 | Should -be $true -Because "Should notify by Agent notifications"
                                     }
                                 }
@@ -268,7 +266,7 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                             }
                         }
                     }
-                    else {    
+                    else {
                         Context "Testing job history configuration on $psitem" {
                             [int]$minimumJobHistoryRows = Get-DbcConfigValue agent.history.maximumhistoryrows
                             [int]$minimumJobHistoryRowsPerJob = Get-DbcConfigValue agent.history.maximumjobhistoryrows
@@ -289,55 +287,62 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                                 }
                             }
                         }
-                    }      
-                }
-            }
-            Describe "Long Running Agent Jobs" -Tags LongRunningJob, $filename {
-                $skip = Get-DbcConfigValue skip.agent.longrunningjobs
-                $runningjobpercentage = Get-DbcConfigValue agent.longrunningjob.percentage
-                if (-not $skip) {
-                    $query = "SELECT 
-    JobName, 
-    AvgSec,
-    start_execution_date as StartDate,
-    RunningSeconds,
-    RunningSeconds - AvgSec AS Diff 
-    FROM
-    (
-    SELECT
-     j.name AS JobName, 
-     start_execution_date,
-     AVG(DATEDIFF(SECOND, 0, STUFF(STUFF(RIGHT('000000' 
-        + CONVERT(VARCHAR(6),jh.run_duration),6),5,0,':'),3,0,':'))) AS AvgSec,
-        ja.start_execution_date as startdate,
-    DATEDIFF(second, ja.start_execution_date, GetDate()) AS RunningSeconds
-    FROM msdb.dbo.sysjobactivity ja 
-    JOIN msdb.dbo.sysjobs j 
-    ON ja.job_id = j.job_id
-    JOIN msdb.dbo.sysjobhistory jh 
-    ON jh.job_id = j.job_id
-    WHERE start_execution_date is not null
-    AND stop_execution_date is null
-    GROUP BY j.name,j.job_id,start_execution_date,stop_execution_date,ja.job_id
-    ) AS t
-    ORDER BY JobName;"
-                    $runningjobs = Invoke-DbaQuery -SqlInstance $PSItem -Database msdb -Query $query
-                }
-                if ($NotContactable -contains $psitem) {
-                    Context "Testing long running jobs on $psitem" {
-                        It "Can't Connect to $Psitem" {
-                            $false | Should -BeTrue -Because "The instance should be available to be connected to!"
-                        }
                     }
                 }
-                else {    
-                    Context "Testing long running jobs on $psitem" {
-                        foreach ($runningjob in $runningjobs | Where-Object { $_.AvgSec -ne 0 }) {
-                            It "Running job $($runningjob.JobName) duration should not be more than $runningjobpercentage % extra of the average run time on $psitem" -Skip:$skip {
-                                Assert-LongRunningJobs -runningjob $runningjob -runningjobpercentage $runningjobpercentage
+                Describe "Long Running Agent Jobs" -Tags LongRunningJob, $filename {
+                    $skip = Get-DbcConfigValue skip.agent.longrunningjobs
+                    $runningjobpercentage = Get-DbcConfigValue agent.longrunningjob.percentage
+                    if (-not $skip) {
+                        $query = "SELECT
+        JobName,
+        AvgSec,
+        start_execution_date as StartDate,
+        RunningSeconds,
+        RunningSeconds - AvgSec AS Diff
+        FROM
+        (
+        SELECT
+         j.name AS JobName,
+         start_execution_date,
+         AVG(DATEDIFF(SECOND, 0, STUFF(STUFF(RIGHT('000000'
+            + CONVERT(VARCHAR(6),jh.run_duration),6),5,0,':'),3,0,':'))) AS AvgSec,
+            ja.start_execution_date as startdate,
+        DATEDIFF(second, ja.start_execution_date, GetDate()) AS RunningSeconds
+        FROM msdb.dbo.sysjobactivity ja
+        JOIN msdb.dbo.sysjobs j
+        ON ja.job_id = j.job_id
+        JOIN msdb.dbo.sysjobhistory jh
+        ON jh.job_id = j.job_id
+        WHERE start_execution_date is not null
+        AND stop_execution_date is null
+        GROUP BY j.name,j.job_id,start_execution_date,stop_execution_date,ja.job_id
+        ) AS t
+        ORDER BY JobName;"
+                        $runningjobs = Invoke-DbaQuery -SqlInstance $PSItem -Database msdb -Query $query
+                    }
+                    if ($NotContactable -contains $psitem) {
+                        Context "Testing long running jobs on $psitem" {
+                            It "Can't Connect to $Psitem" {
+                                $false | Should -BeTrue -Because "The instance should be available to be connected to!"
                             }
                         }
-                    }   
+                    }
+                    else {
+                        Context "Testing long running jobs on $psitem" {
+                            if ($runningjobs) {
+                                foreach ($runningjob in $runningjobs | Where-Object { $_.AvgSec -ne 0 }) {
+                                    It "Running job $($runningjob.JobName) duration should not be more than $runningjobpercentage % extra of the average run time on $psitem" -Skip:$skip {
+                                        Assert-LongRunningJobs -runningjob $runningjob -runningjobpercentage $runningjobpercentage
+                                    }
+                                }
+                            }
+                            else {
+                                It "There are no running jobs currently on $psitem" -Skip:$skip {
+                                    $True | SHould -BeTrue
+                                }
+                            }
+                        }
+                    }
                 }
                 Describe "Last Agent Job Run" -Tags LastJobRunTime, $filename {
                     $skip = Get-DbcConfigValue skip.agent.lastjobruntime
@@ -351,7 +356,7 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                         j.job_id,
                         j.name AS JobName,
                         jh.run_duration AS Duration
-                        FROM msdb.dbo.sysjobs j 
+                        FROM msdb.dbo.sysjobs j
                         INNER JOIN
                             (
                                 SELECT job_id, instance_id = MAX(instance_id)
@@ -364,19 +369,19 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                             ON jh.job_id = h.job_id
                             AND jh.instance_id = h.instance_id
                         ) AS lrt
-                        
+
                         IF OBJECT_ID('tempdb..#dbachecksAverageRunTime') IS NOT NULL DROP Table #dbachecksAverageRunTime
                         SELECT * INTO #dbachecksAverageRunTime
                         FROM
                         (
-                        SELECT 
+                        SELECT
                         job_id,
                         AVG(DATEDIFF(SECOND, 0, STUFF(STUFF(RIGHT('000000' + CONVERT(VARCHAR(6),run_duration),6),5,0,':'),3,0,':'))) AS AvgSec
                         FROM msdb.dbo.sysjobhistory hist
                         GROUP BY job_id
                         ) as art
-                        
-                        SELECT 
+
+                        SELECT
                         JobName,
                         Duration,
                         AvgSec,
@@ -384,19 +389,24 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
                         FROM #dbachecksLastRunTime lastrun
                         JOIN #dbachecksAverageRunTime avgrun
                         ON lastrun.job_id = avgrun.job_id
-                        
+
                         DROP Table #dbachecksLastRunTime
                         DROP Table #dbachecksAverageRunTime"
                         $lastagentjobruns = Invoke-DbaQuery -SqlInstance $PSItem -Database msdb -Query $query
-                    }
-                    else {    
                         Context "Testing last job run time on $psitem" {
                             foreach ($lastagentjobrun in $lastagentjobruns | Where-Object { $_.AvgSec -ne 0 }) {
                                 It "Job $($lastagentjobrun.JobName) last run duration should be not be greater than $runningjobpercentage % extra of the average run time on $psitem" -Skip:$skip {
                                     Assert-LastJobRun -lastagentjobrun $lastagentjobrun -runningjobpercentage $runningjobpercentage
                                 }
                             }
-                        }  
+                        }
+                    }
+                    else {
+                        Context "Testing last job run time on $psitem" {
+                            It "Job average run time on $psitem" -Skip {
+                                Assert-LastJobRun -lastagentjobrun $lastagentjobrun -runningjobpercentage $runningjobpercentage
+                            }
+                        }
                     }
                 }
             }
@@ -407,8 +417,8 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
 # SIG # Begin signature block
 # MIINEAYJKoZIhvcNAQcCoIINATCCDP0CAQExCzAJBgUrDgMCGgUAMGkGCisGAQQB
 # gjcCAQSgWzBZMDQGCisGAQQBgjcCAR4wJgIDAQAABBAfzDtgWUsITrck0sYpfvNR
-# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUMQncZfyqvmhKY/g0TqgpOFZh
-# BaCgggpSMIIFGjCCBAKgAwIBAgIQAsF1KHTVwoQxhSrYoGRpyjANBgkqhkiG9w0B
+# AgEAAgEAAgEAAgEAAgEAMCEwCQYFKw4DAhoFAAQUqeEo7JCY+dPT/ByN9VVAvY9q
+# JQegggpSMIIFGjCCBAKgAwIBAgIQAsF1KHTVwoQxhSrYoGRpyjANBgkqhkiG9w0B
 # AQsFADByMQswCQYDVQQGEwJVUzEVMBMGA1UEChMMRGlnaUNlcnQgSW5jMRkwFwYD
 # VQQLExB3d3cuZGlnaWNlcnQuY29tMTEwLwYDVQQDEyhEaWdpQ2VydCBTSEEyIEFz
 # c3VyZWQgSUQgQ29kZSBTaWduaW5nIENBMB4XDTE3MDUwOTAwMDAwMFoXDTIwMDUx
@@ -468,11 +478,11 @@ Set-PSFConfig -Module dbachecks -Name global.notcontactable -Value $NotContactab
 # EyhEaWdpQ2VydCBTSEEyIEFzc3VyZWQgSUQgQ29kZSBTaWduaW5nIENBAhACwXUo
 # dNXChDGFKtigZGnKMAkGBSsOAwIaBQCgeDAYBgorBgEEAYI3AgEMMQowCKACgACh
 # AoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisGAQQBgjcCAQsxDjAM
-# BgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBRN0Grzp0iMeIsYPLMtS8P8OShF
-# mjANBgkqhkiG9w0BAQEFAASCAQACsWUPDmS88eY7dxXAMAC2GCrwpZXcoFxFWfLS
-# dfb2wOqa6aeqc82WUqfyoHV+NBugo0Svz9esPKukI0jrGlF+ns0V+XFpDk7Hb8Z0
-# R/IpX58BhvvAVeN89nQ+gnFDPSMaBCHbSl6HtkuW6wfabgMavw4oD6XOtiM4JChP
-# frWbghbZZuTcMVTbPWDf5hHmsmpSj7wEJjtc0KyG8d9utMjczfaQI210AN3w6Opk
-# yvOHrHJg/J53jEStKfl9R+y2mSHyIY+Z7PmqiTSb4QBJWvwmcGLUSbKn+9ShMxt7
-# i4RTtEQ4+0TaN78/pgvddzyvd1GYzDXiRijre6yPffRYa5Ab
+# BgorBgEEAYI3AgEVMCMGCSqGSIb3DQEJBDEWBBTNLvjMGUJ/ZNFiFVFm9PehNPom
+# wjANBgkqhkiG9w0BAQEFAASCAQAwV/YWzhfm/teMU0tS4ZkziNDFIfkgOK0Xccq3
+# TPTZQTW59noEOVYkJNs02LVuGx8KKVczlHQfqgoMv+X2ZpkwMsUt7l5E+CEgSf4R
+# Yc3QcFpJ268V2CDM8VrAVGF/T/frs+eTdiFsZmlmY7LS9Z632i1fiaJ+nPUseEU5
+# tBC2EPsBwyjVjIozuaAiuWCCQQKsL/yM0s7ZhS0nbzjtsof+UPrR1RLrP3nUioAc
+# EZIVh/UnNvFaH9y1fDG9PkdPMSH5AFBEcT8I19rz/GGUSFblO8SmQJR9h8yur5P3
+# eFxRIB4ZBqcOq93OMty5kHbSObdyK+HkS1spwiNH/5GCkAW2
 # SIG # End signature block
